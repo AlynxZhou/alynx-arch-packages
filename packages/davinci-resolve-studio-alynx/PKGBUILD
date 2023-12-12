@@ -1,0 +1,162 @@
+# Maintainer: Alynx Zhou <alynx.zhou@gmail.com>
+
+# Based on <https://aur.archlinux.org/packages/davinci-resolve-studio#comment-947466>.
+
+# Removed archive downloading, it's not so hard to download the archive from
+# <https://www.blackmagicdesign.com/support/>, and the downloading never works
+# for me, so just download the archive manually and put it here.
+#
+# This package is designed to install to `/opt/${_pkgname}`. Feel free to use it
+# when you are targeting to installed location.
+
+_pkgname=resolve
+pkgname=davinci-resolve-studio-alynx
+major_version=18.6
+minor_version=4
+pkgver="${major_version}.${minor_version}"
+pkgrel=1
+sha256sums=("ef168770f607219df7aadd326adc86b99ec634b4daab66230e36fbadba9d6916")
+pkgdesc="Professional A/V post-production software suite from Blackmagic Design. Studio edition, requires license key or license dongle. Alynx flavor."
+conflicts=("davinci-resolve" "davinci-resolve-beta"
+	   "davinci-resolve-studio" "davinci-resolve-studio-beta")
+arch=("x86_64")
+url="https://www.blackmagicdesign.com/support/family/davinci-resolve-and-fusion"
+license=("Commercial")
+depends=("glu" "gtk2" "libpng12" "fuse2" "opencl-driver" "qt5-x11extras"
+	 "qt5-svg" "qt5-webengine" "qt5-websockets" "qt5-quickcontrols2"
+	 "qt5-multimedia" "libxcrypt-compat" "xmlsec" "java-runtime"
+	 "ffmpeg4.4" "gst-plugins-bad-libs" "python-numpy" "tbb" "apr-util"
+	 "luajit" "libc++")
+makedepends=("libarchive" "xdg-user-dirs" "patchelf")
+options=("!strip")
+_basename="DaVinci_Resolve_Studio_${pkgver}_Linux"
+_archive="${_basename}.zip"
+_installer="${_basename}.run"
+source=("${_archive}")
+install="davinci-resolve-studio-alynx.install"
+
+prepare() {
+  pushd "${srcdir}"
+  chmod u+x "${srcdir}/${_installer}"
+  "${srcdir}/${_installer}" --appimage-extract
+  popd
+
+  # Fix permission for all files and dirs.
+  chmod -R u+rwX,go+rX,go-w "${srcdir}/squashfs-root"
+
+  pushd "${srcdir}/squashfs-root/share/panels"
+  tar -xpvzf dvpanel-framework-linux-x86_64.tgz
+  chmod -R u+rwX,go+rX,go-w "${srcdir}/squashfs-root/share/panels/lib"
+  mv *.so "${srcdir}/squashfs-root/libs"
+  # Move dependencies to the same place, it's not worthy to put them a specific
+  # dir and set RPATH for panel libs, if they depends on same library but
+  # different version, it's their fault and unlikely to happen.
+  mv lib/* "${srcdir}/squashfs-root/libs"
+  popd
+
+  # Remove unused files.
+  rm -rf "${srcdir}"/squashfs-root/installer "${srcdir}"/squashfs-root/installer* "${srcdir}"/squashfs-root/AppRun "${srcdir}"/squashfs-root/AppRun*
+
+  while IFS= read -r -d '' i; do
+    chmod 0755 "${i}"
+  done < <(find "${srcdir}/squashfs-root" -type d -print0)
+
+  while IFS= read -r -d '' i; do
+    [[ -f "${i}" && $(od -t x1 -N 4 "${i}") == *"7f 45 4c 46"* ]] || continue
+    chmod 0755 "${i}"
+  done < <(find "${srcdir}/squashfs-root" -type f -print0)
+
+  # We don't install bundled libraries to system, so let the program find
+  # bundled libraries via RPATH.
+  while IFS= read -r -d '' i; do
+    [[ -f "${i}" && $(od -t x1 -N 4 "${i}") == *"7f 45 4c 46"* ]] || continue
+    patchelf --set-rpath \
+"/opt/${_pkgname}/libs:"\
+"/opt/${_pkgname}/libs/plugins/sqldrivers:"\
+"/opt/${_pkgname}/libs/plugins/xcbglintegrations:"\
+"/opt/${_pkgname}/libs/plugins/imageformats:"\
+"/opt/${_pkgname}/libs/plugins/platforms:"\
+"/opt/${_pkgname}/libs/Fusion:"\
+"/opt/${_pkgname}/plugins:"\
+"/opt/${_pkgname}/bin:"\
+"/opt/${_pkgname}/BlackmagicRAWSpeedTest/BlackmagicRawAPI:"\
+"/opt/${_pkgname}/BlackmagicRAWSpeedTest/plugins/platforms:"\
+"/opt/${_pkgname}/BlackmagicRAWSpeedTest/plugins/imageformats:"\
+"/opt/${_pkgname}/BlackmagicRAWSpeedTest/plugins/mediaservice:"\
+"/opt/${_pkgname}/BlackmagicRAWSpeedTest/plugins/audio:"\
+"/opt/${_pkgname}/BlackmagicRAWSpeedTest/plugins/xcbglintegrations:"\
+"/opt/${_pkgname}/BlackmagicRAWSpeedTest/plugins/bearer:"\
+"/opt/${_pkgname}/BlackmagicRAWPlayer/BlackmagicRawAPI:"\
+"/opt/${_pkgname}/BlackmagicRAWPlayer/plugins/mediaservice:"\
+"/opt/${_pkgname}/BlackmagicRAWPlayer/plugins/imageformats:"\
+"/opt/${_pkgname}/BlackmagicRAWPlayer/plugins/audio:"\
+"/opt/${_pkgname}/BlackmagicRAWPlayer/plugins/platforms:"\
+"/opt/${_pkgname}/BlackmagicRAWPlayer/plugins/xcbglintegrations:"\
+"/opt/${_pkgname}/BlackmagicRAWPlayer/plugins/bearer:"\
+"/opt/${_pkgname}/Onboarding/plugins/xcbglintegrations:"\
+"/opt/${_pkgname}/Onboarding/plugins/qtwebengine:"\
+"/opt/${_pkgname}/Onboarding/plugins/platforms:"\
+"/opt/${_pkgname}/Onboarding/plugins/imageformats:"\
+"/opt/${_pkgname}/DaVinci Control Panels Setup/plugins/platforms:"\
+"/opt/${_pkgname}/DaVinci Control Panels Setup/plugins/imageformats:"\
+"/opt/${_pkgname}/DaVinci Control Panels Setup/plugins/bearer:"\
+"/opt/${_pkgname}/DaVinci Control Panels Setup/AdminUtility/PlugIns/DaVinciKeyboards:"\
+"/opt/${_pkgname}/DaVinci Control Panels Setup/AdminUtility/PlugIns/DaVinciPanels:"\
+"\$ORIGIN" "${i}"
+  done < <(find "${srcdir}/squashfs-root" -type f -size -32M -print0)
+
+  while IFS= read -r -d '' i; do
+    sed -i "s|RESOLVE_INSTALL_LOCATION|/opt/${_pkgname}|g" "${i}"
+  done < <(find . -type f '(' -name "*.desktop" -o -name "*.directory" -o -name "*.directory" -o -name "*.menu" ')' -print0)
+
+  echo "StartupWMClass=resolve" >> "${srcdir}/squashfs-root/share/DaVinciResolve.desktop"
+
+  echo 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTRS{idVendor}=="096e", MODE="0666"' > "${srcdir}/squashfs-root/share/etc/udev/rules.d/99-DavinciPanel.rules"
+}
+
+package() {
+  mkdir -p -m 0755 "${pkgdir}/opt/${_pkgname}/"{configs,DolbyVision,easyDCP,Fairlight,GPUCache,logs,Media,"Resolve Disk Database",.crashreport,.license,.LUT}
+
+  cp -a "${srcdir}"/squashfs-root/* "${pkgdir}/opt/${_pkgname}"
+
+  # NOTE: Linking is better to be done in pkgdir, because AppImage seems follow
+  # symlink when deleting existing files on extracting, linking in srcdir will
+  # lead into errors when remaking the package.
+
+  ln -s "/opt/${_pkgname}/BlackmagicRAWPlayer/BlackmagicRawAPI" "${pkgdir}/opt/${_pkgname}/bin/"
+
+  # DaVinci Resolve bundled some libraries, but not all, and when it tries to
+  # load system libraries, some of its bundled libraries are too old, so just
+  # replace those old libraries with system libraries.
+
+  mv "${pkgdir}/opt/${_pkgname}/libs/libc++.so.1" "${pkgdir}/opt/${_pkgname}/libs/libc++.so.1.orig"
+  ln -s /usr/lib/libc++.so.1.0 "${pkgdir}/opt/${_pkgname}/libs/libc++.so.1"
+
+  mv "${pkgdir}/opt/${_pkgname}/libs/libglib-2.0.so.0" "${pkgdir}/opt/${_pkgname}/libs/libglib-2.0.so.0.orig"
+  ln -s /usr/lib/libglib-2.0.so.0 "${pkgdir}/opt/${_pkgname}/libs/libglib-2.0.so.0"
+
+  # Install files expected to be found in specific location.
+  pushd "${pkgdir}/opt/${_pkgname}/"
+  install -Dm0644 share/default-config.dat -t "${pkgdir}/opt/${_pkgname}/configs"
+  install -Dm0644 share/log-conf.xml -t "${pkgdir}/opt/${_pkgname}/configs"
+  install -Dm0644 share/default_cm_config.bin -t "${pkgdir}/opt/${_pkgname}/DolbyVision"
+
+  install -Dm0644 share/DaVinciResolve.desktop -t "${pkgdir}/usr/share/applications"
+  install -Dm0644 share/DaVinciControlPanelsSetup.desktop -t "${pkgdir}/usr/share/applications"
+  # We already removed the installer and we don't use it to uninstall this.
+  # install -Dm0644 share/DaVinciResolveInstaller.desktop -t "${pkgdir}/usr/share/applications"
+  install -Dm0644 share/DaVinciResolveCaptureLogs.desktop -t "${pkgdir}/usr/share/applications"
+  install -Dm0644 share/blackmagicraw-player.desktop -t "${pkgdir}/usr/share/applications"
+  install -Dm0644 share/blackmagicraw-speedtest.desktop -t "${pkgdir}/usr/share/applications"
+
+  install -Dm0644 share/DaVinciResolve.directory -t "${pkgdir}/usr/share/desktop-directories"
+  install -Dm0644 share/DaVinciResolve.menu -t "${pkgdir}/etc/xdg/menus"
+  install -Dm0644 graphics/DV_Resolve.png -t "${pkgdir}/usr/share/icons/hicolor/128x128/apps"
+  install -Dm0644 graphics/DV_ResolveProj.png -t "${pkgdir}/usr/share/icons/hicolor/128x128/apps"
+  install -Dm0644 share/resolve.xml -t "${pkgdir}/usr/share/mime/packages"
+
+  install -Dm0644 share/etc/udev/rules.d/99-BlackmagicDevices.rules -t "${pkgdir}/usr/lib/udev/rules.d"
+  install -Dm0644 share/etc/udev/rules.d/99-ResolveKeyboardHID.rules -t "${pkgdir}/usr/lib/udev/rules.d"
+  install -Dm0644 share/etc/udev/rules.d/99-DavinciPanel.rules -t "${pkgdir}/usr/lib/udev/rules.d"
+  popd
+}
