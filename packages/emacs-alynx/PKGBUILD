@@ -19,7 +19,7 @@
 #   - Disable PGTK X warning, I hack GTK and I know what I am doing.
 
 pkgname=emacs-alynx
-pkgver=30.0.50.171552
+pkgver=30.0.50.172360
 pkgrel=1
 pkgdesc="GNU Emacs. Alynx flavor."
 arch=("x86_64")
@@ -72,7 +72,7 @@ conflicts=("emacs")
 # the latest commit and test whether it works fine. I have to sync my tools
 # between different machines and this makes sure that I always get the same
 # working copy.
-_commit="a5fbb652ed3614d6735015551564f32b80e42c53"
+_commit="56871dbd4c1a1af3f0d1624f4858e9be67a89f7e"
 # source=("git+https://git.savannah.gnu.org/git/emacs.git#commit=${_commit}")
 # GitHub mirror is easier to access.
 source=("git+https://github.com/emacs-mirror/emacs.git#commit=${_commit}"
