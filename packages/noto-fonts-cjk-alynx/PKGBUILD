@@ -1,0 +1,50 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Maintainer: Alynx Zhou <alynx.zhou@gmail.com>
+pkgname=noto-fonts-cjk-alynx
+pkgver=20240730
+_commit=9b0f1436e455d902de067a2501422e5dc71ad16b
+pkgrel=1
+pkgdesc="Google Noto CJK fonts. Alynx flavor."
+arch=(any)
+url="https://www.google.com/get/noto/"
+license=(OFL-1.1)
+makedepends=(git python-fonttools)
+source=(git+https://github.com/googlefonts/noto-cjk.git#commit=$_commit)
+sha256sums=('c6a33010782cc9c5d37e7f18381b14c3a598148fe058c84580d65f336f99cc09')
+
+prepare() {
+  cd noto-cjk
+
+  mkdir -p build
+
+  # Patch the font to use typo metrics from OS/2 table.
+  _patch_font() {
+    local otfname
+    local ttxname
+    otfname="${1}"
+    ttxname=$(basename "${otfname}")
+    ttxname="${ttxname%.otf}"
+    ttxname="build/${ttxname}.ttx"
+    ttx -d build "${otfname}"
+    sed -i 's/<version value="3/<version value="4/g' "${ttxname}"
+    sed -i 's/<fsSelection value="00000000 0/<fsSelection value="00000000 1/g' "${ttxname}"
+    ttx -d build "${ttxname}"
+  }
+
+  for f in Sans/OTF/SimplifiedChinese/NotoSansCJKsc-*.otf; do
+    _patch_font "${f}"
+  done
+  for f in Sans/Mono/NotoSansMonoCJKsc-*.otf; do
+    _patch_font "${f}"
+  done
+  for f in Serif/OTF/SimplifiedChinese/NotoSerifCJKsc-*.otf; do
+    _patch_font "${f}"
+  done
+}
+
+package() {
+  cd noto-cjk
+
+  install -Dm644 build/*.otf -t "${pkgdir}/usr/share/fonts/noto-cjk"
+  install -Dm644 Sans/LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
+}
