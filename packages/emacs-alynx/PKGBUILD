@@ -72,7 +72,7 @@ conflicts=("emacs")
 # the latest commit and test whether it works fine. I have to sync my tools
 # between different machines and this makes sure that I always get the same
 # working copy.
-_commit="9709cb8d162c5696c9960abd4449078a4400b369"
+_commit="ef903e0f5ac27c80a2d3429392a82c3d24795c55"
 # source=("git+https://git.savannah.gnu.org/git/emacs.git#commit=${_commit}")
 # GitHub mirror is easier to access.
 source=("git+https://github.com/emacs-mirror/emacs.git#commit=${_commit}"
