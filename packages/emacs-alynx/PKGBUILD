@@ -22,7 +22,7 @@ pkgname=emacs-alynx
 pkgver=31.0.50.180119
 pkgrel=1
 pkgdesc="GNU Emacs. Alynx flavor."
-arch=("x86_64")
+arch=("x86_64" "aarch64")
 url="http://www.gnu.org/software/emacs/"
 license=("GPL3")
 # `gmp` is mouse support in Linux console.
