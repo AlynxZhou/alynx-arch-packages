@@ -19,7 +19,7 @@
 #   - Disable PGTK X warning, I hack GTK and I know what I am doing.
 
 pkgname=emacs-alynx
-pkgver=31.0.50.180119
+pkgver=31.0.50.181042
 pkgrel=1
 pkgdesc="GNU Emacs. Alynx flavor."
 arch=("x86_64" "aarch64")
@@ -58,7 +58,7 @@ depends=(
   "libsystemd.so"
   "libtiff.so"
   "libtree-sitter.so"
-  "libwebpdecoder.so"
+  "libwebp.so"
   "libwebpdemux.so"
   "libxfixes"
   "libxml2.so"
@@ -72,7 +72,7 @@ conflicts=("emacs")
 # the latest commit and test whether it works fine. I have to sync my tools
 # between different machines and this makes sure that I always get the same
 # working copy.
-_commit="ef903e0f5ac27c80a2d3429392a82c3d24795c55"
+_commit="967294d2cb4db828b514293f4b32d8ca7caadf39"
 # source=("git+https://git.savannah.gnu.org/git/emacs.git#commit=${_commit}")
 # GitHub mirror is easier to access.
 source=("git+https://github.com/emacs-mirror/emacs.git#commit=${_commit}"
@@ -160,7 +160,7 @@ build() {
   # Please note that incremental compilation implies that you are reusing your
   # source directory!
   #
-  # Don't set `-j$(nprocs)` here, I prefer set `MAKEFLAGS="-j$(nproc)"` in
+  # Don't set `-j $(nprocs)` here, I prefer set `MAKEFLAGS="-j $(nproc)"` in
   # `/etc/makepkg.conf`.
   make
 }
