@@ -1,0 +1,82 @@
+# Maintainer: Alynx zhou <alynx.zhou@gmail.com>
+
+# A fixed version of <https://github.com/v2rayA/v2rayA/blob/main/install/aur/v2raya/PKGBUILD>:
+#
+# - Drop the useless `.INSTALL` file.
+# - Correctly download `Xray-core` submodule.
+# - Correctly download and install unmentioned Geo IP and site files.
+_pkgname=v2rayA
+pkgname=v2raya-alynx
+pkgver=2.4.11
+pkgrel=1
+pkgdesc="A web GUI client of Project V which supports VMess, VLESS, SS, SSR, Trojan, Tuic and Juicity protocols"
+arch=("i686" "pentium4" "x86_64" "arm" "armv7h" "armv6h" "aarch64")
+url="https://github.com/v2rayA/v2rayA"
+license=("AGPL")
+depends=("glibc" "hicolor-icon-theme")
+makedepends=("git" "go>=2:1.17.0-1" "nodejs>=14" "yarn")
+provides=("v2raya")
+conflicts=("v2raya")
+backup=("etc/default/v2raya")
+source=(
+  "git+https://github.com/v2rayA/v2rayA.git#tag=v${pkgver}"
+  "git+https://github.com/XTLS/Xray-core.git"
+  "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat"
+  "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat"
+)
+sha512sums=("SKIP" "SKIP" "SKIP" "SKIP")
+
+prepare() {
+  cd "${_pkgname}"
+
+  git submodule init
+  git config submodule.core/xray.url "${srcdir}/Xray-core"
+  git -c protocol.file.allow=always submodule update --recursive
+}
+
+build() {
+  cd "${_pkgname}"
+
+  export GO111MODULE=on
+  export GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
+
+  pushd "gui"
+  yarn --check-files --ignore-engines
+  OUTPUT_DIR="../service/server/router/web" yarn --ignore-engines build
+  popd
+
+  pushd "service"
+  go build -trimpath -ldflags "-X github.com/v2rayA/v2rayA/conf.Version=${pkgver} -s -w" -o v2raya
+  popd
+
+  pushd "core"
+  go build -trimpath -ldflags "-X main.Version=${pkgver} -s -w" -o v2raya_core ./main
+  popd
+
+  # generate default config
+  cat > "v2raya.conf" << EOF
+# v2raya config example
+# Everything has defaults so you only need to uncomment things you want to
+# change
+
+EOF
+  chmod +x ./service/v2raya
+  ./service/v2raya --report config | sed "1,6d" | fold -s -w 78 | sed -E "s/^([^#].+)/# \1/"  >> "v2raya.conf"
+}
+
+package() {
+  install -dm 755 "${pkgdir}/usr/share/v2raya/"
+  install -Dm 644 geosite.dat "${pkgdir}/usr/share/v2raya/"
+  install -Dm 644 geoip.dat "${pkgdir}/usr/share/v2raya/"
+
+  cd "${_pkgname}"
+
+  install -Dm 755 service/v2raya -t "${pkgdir}/usr/bin/"
+  install -Dm 755 core/v2raya_core -t "${pkgdir}/usr/bin/"
+  install -dm 750 "${pkgdir}/etc/v2raya/"
+  install -Dm 644 install/universal/v2raya.desktop -t "${pkgdir}/usr/share/applications/"
+  install -Dm 644 install/universal/v2raya.service -t "${pkgdir}/usr/lib/systemd/system/"
+  install -Dm 644 install/universal/v2raya-lite.service -t "${pkgdir}/usr/lib/systemd/user/"
+  install -Dm 644 gui/public/img/icons/android-chrome-512x512.png "${pkgdir}/usr/share/icons/hicolor/512x512/apps/v2raya.png"
+  install -Dm 644 v2raya.conf "${pkgdir}/etc/default/v2raya"
+}
