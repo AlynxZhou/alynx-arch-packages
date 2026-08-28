@@ -1,10 +1,5 @@
 # Maintainer: Alynx zhou <alynx.zhou@gmail.com>
 
-# A fixed version of <https://github.com/v2rayA/v2rayA/blob/main/install/aur/v2raya/PKGBUILD>:
-#
-# - Drop the useless `.INSTALL` file.
-# - Correctly download `Xray-core` submodule.
-# - Correctly download and install unmentioned Geo IP and site files.
 _pkgname=v2rayA
 pkgname=v2raya-alynx
 pkgver=2.4.11
@@ -38,7 +33,7 @@ build() {
   cd "${_pkgname}"
 
   export GO111MODULE=on
-  export GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
+  # export GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
 
   pushd "gui"
   yarn --check-files --ignore-engines
