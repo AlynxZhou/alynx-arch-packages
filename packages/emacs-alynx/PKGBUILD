@@ -1,23 +1,6 @@
 # Maintainer: Alynx Zhou <alynx.zhou@gmail.com>
 
-# This is just used to record my building options, it may be not OK for you. I
-# even do not upload it to AUR. If you try my package and crash, don't cry to
-# me or upstream devs.
-
-# Based on <https://aur.archlinux.org/packages/emacs-pgtk-native-comp-git> and
-# <https://gitlab.archlinux.org/archlinux/packaging/packages/emacs/>.
-
-# To remind me why I have those:
-#   - Unstable branch, because of some bleeding edge features.
-#   - Use PGTK by default. (No more GUI toolkit hacks and Wayland support!)
-#   - Native compilation, and AOT compile all Emacs lisp files. (Why not?)
-#   - ALSA support. (Why not?)
-#   - XInput2. (But it seems that PGTK does not use it.)
-#   - No CLI or NOX build, I'm a desktop engineer and always have GUI.
-#   - I don't use xwidgets, but may be useful in future.
-#   - No PDF or HTML docs, I just read them directly in Emacs.
-#   - Disable PGTK X warning, I hack GTK and I know what I am doing.
-
+_pkgname=emacs
 pkgname=emacs-alynx
 pkgver=32.0.50.182401
 pkgrel=1
@@ -82,7 +65,7 @@ sha512sums=("SKIP"
             "9c74ff3cc7648b1f90d6d9705b3c3bf28eb724a5cb633edf362d10dfdb8db3917812e09fe474d26afae9aa6805fb872dfa12a24d740a0b22453c43507b4f984c")
 
 pkgver() {
-  cd emacs
+  cd "${_pkgname}"
 
   printf "%s.%s" \
     $(grep AC_INIT configure.ac | \
@@ -91,7 +74,7 @@ pkgver() {
 }
 
 prepare() {
-  cd emacs
+  cd "${_pkgname}"
 
   git apply -3 "${srcdir}/emacs-disable-pgtk-x-warning.patch"
 
@@ -99,7 +82,7 @@ prepare() {
 }
 
 build() {
-  cd emacs
+  cd "${_pkgname}"
 
   local _options=(
     --prefix=/usr
@@ -167,12 +150,12 @@ build() {
 
 # I am using unstable version and tests may be not updated.
 # check() {
-#   cd emacs
+#   cd "${_pkgname}"
 #   make check
 # }
 
 package() {
-  cd emacs
+  cd "${_pkgname}"
 
   make DESTDIR="${pkgdir}" install
 
