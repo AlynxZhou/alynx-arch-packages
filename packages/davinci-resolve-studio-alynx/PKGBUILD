@@ -11,27 +11,29 @@
 
 _pkgname=resolve
 pkgname=davinci-resolve-studio-alynx
-pkgver=19.0.1
+pkgver=21.1.1
 pkgrel=1
-sha256sums=('7d87a86f2e58d6ae02574b3458cae65c6cbe8d1d4c39a7b6844d38cf14a2246f')
 pkgdesc="Professional A/V post-production software suite from Blackmagic Design. Studio edition, requires license key or license dongle. Alynx flavor."
 conflicts=("davinci-resolve" "davinci-resolve-beta"
 	   "davinci-resolve-studio" "davinci-resolve-studio-beta")
 arch=("x86_64")
 url="https://www.blackmagicdesign.com/support/family/davinci-resolve-and-fusion"
 license=("Commercial")
-depends=("glu" "gtk2" "libpng12" "fuse2" "opencl-driver" "qt5-x11extras"
-	 "qt5-svg" "qt5-webengine" "qt5-websockets" "qt5-quickcontrols2"
-	 "qt5-multimedia" "libxcrypt-compat" "xmlsec" "java-runtime"
-	 "ffmpeg4.4" "gst-plugins-bad-libs" "python-numpy" "tbb" "apr-util"
-	 "luajit" "libc++")
+depends=("glu" "fuse2" "opencl-driver" "qt5-x11extras" "qt5-svg"
+	 "qt5-quickcontrols2" "qt5-multimedia" "libxcrypt-compat" "xmlsec"
+	 "java-runtime" "ffmpeg4.4" "gst-plugins-bad-libs" "python-numpy" "tbb"
+	 "apr-util" "luajit" "libc++" "libc++abi")
 makedepends=("libarchive" "xdg-user-dirs" "patchelf")
-options=("!strip")
+provides=("davinci-resolve-studio")
+conflicts=("davinci-resolve-studio")
 _basename="DaVinci_Resolve_Studio_${pkgver}_Linux"
 _archive="${_basename}.zip"
 _installer="${_basename}.run"
-source=("${_archive}")
+source=("${_archive}" "davinci-control-panels-setup.sh")
 install="davinci-resolve-studio-alynx.install"
+options=("!strip")
+sha256sums=('d4f87af1a28a283bba7d824684402b7447f922e5b8f68d56d131732ea12790a5'
+	    'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8')
 
 prepare() {
   pushd "${srcdir}"
@@ -53,7 +55,7 @@ prepare() {
   popd
 
   # Remove unused files.
-  rm -rf "${srcdir}"/squashfs-root/installer "${srcdir}"/squashfs-root/installer* "${srcdir}"/squashfs-root/AppRun "${srcdir}"/squashfs-root/AppRun*
+  rm -rf "${srcdir}"/squashfs-root/{installer*,AppRun*,CentOSUpdate}
 
   while IFS= read -r -d '' i; do
     chmod 0755 "${i}"
@@ -110,11 +112,17 @@ prepare() {
   echo "StartupWMClass=resolve" >> "${srcdir}/squashfs-root/share/DaVinciResolve.desktop"
 
   echo 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTRS{idVendor}=="096e", MODE="0666"' > "${srcdir}/squashfs-root/share/etc/udev/rules.d/99-DavinciPanel.rules"
+
+  # Fix desktop files.
+  sed -i "s#Exec=.*#Exec=davinci-control-panels-setup#" "${srcdir}/squashfs-root/share/DaVinciControlPanelsSetup.desktop"
+  sed -i "s#Icon=.*#Icon=davinci-resolve#" "${srcdir}/squashfs-root/share/DaVinciResolve.desktop"
+  sed -i "s#Icon=.*#Icon=davinci-resolve-panels-setup#" "squashfs-root/share/DaVinciControlPanelsSetup.desktop"
+  sed -i "s#Icon=.*#Icon=blackmagicraw-player#" "${srcdir}/squashfs-root/share/blackmagicraw-player.desktop"
+  sed -i "s#Icon=.*#Icon=blackmagicraw-speedtest#" "${srcdir}/squashfs-root/share/blackmagicraw-speedtest.desktop"
 }
 
 package() {
-  mkdir -p -m 0755 "${pkgdir}/opt/${_pkgname}/"{configs,DolbyVision,easyDCP,Fairlight,GPUCache,logs,Media,"Resolve Disk Database",.crashreport,.license,.LUT}
-
+  install -d -m 0755 "${pkgdir}/opt/${_pkgname}"
   cp -a "${srcdir}"/squashfs-root/* "${pkgdir}/opt/${_pkgname}"
 
   # NOTE: Linking is better to be done in pkgdir, because AppImage seems follow
@@ -129,6 +137,8 @@ package() {
 
   mv "${pkgdir}/opt/${_pkgname}/libs/libc++.so.1" "${pkgdir}/opt/${_pkgname}/libs/libc++.so.1.orig"
   ln -s /usr/lib/libc++.so.1.0 "${pkgdir}/opt/${_pkgname}/libs/libc++.so.1"
+  mv "${pkgdir}/opt/${_pkgname}/libs/libc++abi.so.1" "${pkgdir}/opt/${_pkgname}/libs/libc++abi.so.1.orig"
+  ln -s /usr/lib/libc++abi.so.1.0 "${pkgdir}/opt/${_pkgname}/libs/libc++abi.so.1"
 
   mv "${pkgdir}/opt/${_pkgname}/libs/libglib-2.0.so.0" "${pkgdir}/opt/${_pkgname}/libs/libglib-2.0.so.0.orig"
   ln -s /usr/lib/libglib-2.0.so.0 "${pkgdir}/opt/${_pkgname}/libs/libglib-2.0.so.0"
@@ -137,28 +147,46 @@ package() {
   mv "${pkgdir}/opt/${_pkgname}/libs/libgmodule-2.0.so.0" "${pkgdir}/opt/${_pkgname}/libs/libgmodule-2.0.so.0.orig"
   ln -s /usr/lib/libgmodule-2.0.so.0 "${pkgdir}/opt/${_pkgname}/libs/libgmodule-2.0.so.0"
 
+  # Install binary launchers.
+  install -d -m 0755 "${pkgdir}/usr/bin"
+  ln -s "/opt/${_pkgname}/bin/resolve" "${pkgdir}/usr/bin/davinci-resolve-studio"
+  install -D -m 0755 "${srcdir}/davinci-control-panels-setup.sh" "${pkgdir}/usr/bin/davinci-control-panels-setup"
+
+  # Install directories.
+  # mkdir -p -m 0755 "${pkgdir}/opt/${_pkgname}/"{configs,DolbyVision,easyDCP,Fairlight,GPUCache,logs,Media,"Resolve Disk Database",.crashreport,.license,.LUT}
+  install -d -m 0755 "${pkgdir}/opt/${_pkgname}/.license"
+  install -d -m 0755 "${pkgdir}/opt/${_pkgname}/Apple Immersive/Calibration"
+  install -d -m 0755 "${pkgdir}/opt/${_pkgname}/Extras"
+  install -d -m 0755 "${pkgdir}/opt/${_pkgname}/Fairlight"
+  install -d -m 0755 "${pkgdir}/opt/${_pkgname}/Immersive/Canon/STMap"
+
   # Install files expected to be found in specific location.
   pushd "${pkgdir}/opt/${_pkgname}/"
-  install -Dm0644 share/default-config.dat -t "${pkgdir}/opt/${_pkgname}/configs"
-  install -Dm0644 share/log-conf.xml -t "${pkgdir}/opt/${_pkgname}/configs"
-  install -Dm0644 share/default_cm_config.bin -t "${pkgdir}/opt/${_pkgname}/DolbyVision"
+  install -D -m 0644 docs/License.html -t "${pkgdir}/usr/share/licenses/${pkgname}"
 
-  install -Dm0644 share/DaVinciResolve.desktop -t "${pkgdir}/usr/share/applications"
-  install -Dm0644 share/DaVinciControlPanelsSetup.desktop -t "${pkgdir}/usr/share/applications"
+  install -D -m 0644 share/default-config.dat -t "${pkgdir}/opt/${_pkgname}/configs"
+  install -D -m 0644 share/log-conf.xml -t "${pkgdir}/opt/${_pkgname}/configs"
+  install -D -m 0644 share/default_cm_config.bin -t "${pkgdir}/opt/${_pkgname}/DolbyVision"
+
+  install -D -m 0644 share/DaVinciResolve.desktop -t "${pkgdir}/usr/share/applications"
+  install -D -m 0644 share/DaVinciControlPanelsSetup.desktop -t "${pkgdir}/usr/share/applications"
   # We already removed the installer and we don't use it to uninstall this.
-  # install -Dm0644 share/DaVinciResolveInstaller.desktop -t "${pkgdir}/usr/share/applications"
-  install -Dm0644 share/DaVinciResolveCaptureLogs.desktop -t "${pkgdir}/usr/share/applications"
-  install -Dm0644 share/blackmagicraw-player.desktop -t "${pkgdir}/usr/share/applications"
-  install -Dm0644 share/blackmagicraw-speedtest.desktop -t "${pkgdir}/usr/share/applications"
+  # install -D -m 0644 share/DaVinciResolveInstaller.desktop -t "${pkgdir}/usr/share/applications"
+  # install -D -m 0644 share/DaVinciResolveCaptureLogs.desktop -t "${pkgdir}/usr/share/applications"
+  install -D -m 0644 share/blackmagicraw-player.desktop -t "${pkgdir}/usr/share/applications"
+  install -D -m 0644 share/blackmagicraw-speedtest.desktop -t "${pkgdir}/usr/share/applications"
+  install -D -m 0644 share/DaVinciResolve.directory -t "${pkgdir}/usr/share/desktop-directories"
+  install -D -m 0644 share/DaVinciResolve.menu -t "${pkgdir}/etc/xdg/menus"
+  install -D -m 0644 graphics/DV_Resolve.png -t "${pkgdir}/usr/share/icons/hicolor/64x64/apps"
+  install -D -m 0644 graphics/DV_ResolveProj.png -t "${pkgdir}/usr/share/icons/hicolor/64x64/apps"
+  install -D -m 0644 graphics/DV_Resolve.png "${pkgdir}/usr/share/icons/hicolor/128x128/apps/davinci-resolve.png"
+  install -D -m 0644 graphics/DV_Panels.png "${pkgdir}/usr/share/icons/hicolor/128x128/apps/davinci-resolve-panels-setup.png"
+  install -D -m 0644 graphics/blackmagicraw-player_256x256_apps.png "${pkgdir}/usr/share/icons/hicolor/256x256/apps/blackmagicraw-player.png"
+  install -D -m 0644 graphics/blackmagicraw-speedtest_256x256_apps.png "${pkgdir}/usr/share/icons/hicolor/256x256/apps/blackmagicraw-speedtest.png"
+  install -D -m 0644 share/resolve.xml -t "${pkgdir}/usr/share/mime/packages"
 
-  install -Dm0644 share/DaVinciResolve.directory -t "${pkgdir}/usr/share/desktop-directories"
-  install -Dm0644 share/DaVinciResolve.menu -t "${pkgdir}/etc/xdg/menus"
-  install -Dm0644 graphics/DV_Resolve.png -t "${pkgdir}/usr/share/icons/hicolor/128x128/apps"
-  install -Dm0644 graphics/DV_ResolveProj.png -t "${pkgdir}/usr/share/icons/hicolor/128x128/apps"
-  install -Dm0644 share/resolve.xml -t "${pkgdir}/usr/share/mime/packages"
-
-  install -Dm0644 share/etc/udev/rules.d/99-BlackmagicDevices.rules -t "${pkgdir}/usr/lib/udev/rules.d"
-  install -Dm0644 share/etc/udev/rules.d/99-ResolveKeyboardHID.rules -t "${pkgdir}/usr/lib/udev/rules.d"
-  install -Dm0644 share/etc/udev/rules.d/99-DavinciPanel.rules -t "${pkgdir}/usr/lib/udev/rules.d"
+  install -D -m 0644 share/etc/udev/rules.d/99-BlackmagicDevices.rules -t "${pkgdir}/usr/lib/udev/rules.d"
+  install -D -m 0644 share/etc/udev/rules.d/99-ResolveKeyboardHID.rules -t "${pkgdir}/usr/lib/udev/rules.d"
+  install -D -m 0644 share/etc/udev/rules.d/99-DavinciPanel.rules -t "${pkgdir}/usr/lib/udev/rules.d"
   popd
 }
