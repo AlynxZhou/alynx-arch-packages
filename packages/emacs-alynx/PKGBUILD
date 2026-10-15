@@ -2,7 +2,7 @@
 
 _pkgname=emacs
 pkgname=emacs-alynx
-pkgver=32.0.50.182401
+pkgver=32.0.50.183755
 pkgrel=1
 pkgdesc="GNU Emacs. Alynx flavor."
 arch=("x86_64" "aarch64")
@@ -55,7 +55,7 @@ conflicts=("emacs")
 # the latest commit and test whether it works fine. I have to sync my tools
 # between different machines and this makes sure that I always get the same
 # working copy.
-_commit="d70c646894addec51b4948425b4a3779f761317f"
+_commit="70cd7a75acda107df2f3bfe4fe2fcfb758f0bfe1"
 # source=("git+https://git.savannah.gnu.org/git/emacs.git#commit=${_commit}")
 # GitHub mirror is easier to access.
 source=("git+https://github.com/emacs-mirror/emacs.git#commit=${_commit}"
