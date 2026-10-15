@@ -1,15 +1,17 @@
-# Maintainer: Antonio Rojas <arojas@archlinux.org>
 # Maintainer: Alynx Zhou <alynx.zhou@gmail.com>
+
 pkgname=noto-fonts-cjk-alynx
 pkgver=20240730
-_commit=9b0f1436e455d902de067a2501422e5dc71ad16b
 pkgrel=1
 pkgdesc="Google Noto CJK fonts. Alynx flavor."
-arch=(any)
+arch=("any")
 url="https://www.google.com/get/noto/"
 license=(OFL-1.1)
-makedepends=(git python-fonttools)
-source=(git+https://github.com/googlefonts/noto-cjk.git#commit=$_commit)
+makedepends=("git" "python-fonttools")
+provides=("noto-fonts-cjk")
+conflicts=("noto-fonts-cjk")
+_commit="9b0f1436e455d902de067a2501422e5dc71ad16b"
+source=("git+https://github.com/googlefonts/noto-cjk.git#commit=${_commit}")
 sha256sums=('c6a33010782cc9c5d37e7f18381b14c3a598148fe058c84580d65f336f99cc09')
 
 prepare() {
@@ -45,6 +47,6 @@ prepare() {
 package() {
   cd noto-cjk
 
-  install -Dm644 build/*.otf -t "${pkgdir}/usr/share/fonts/noto-cjk"
-  install -Dm644 Sans/LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -D -m 0644 build/*.otf -t "${pkgdir}/usr/share/fonts/noto-cjk"
+  install -D -m 0644 Sans/LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
