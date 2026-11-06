@@ -109,6 +109,7 @@ build() {
     # It looks like PGTK won't use XInput 2.
     # --with-xinput2
     --with-pgtk
+    --with-rsvg
     # It seems that this is useless with PGTK.
     --without-xaw3d
     --with-sound=alsa
