@@ -110,6 +110,7 @@ build() {
     # --with-xinput2
     --with-pgtk
     --with-rsvg
+    --with-webp
     # It seems that this is useless with PGTK.
     --without-xaw3d
     --with-sound=alsa
